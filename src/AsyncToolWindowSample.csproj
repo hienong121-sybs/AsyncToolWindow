@@ -60,6 +60,8 @@
     <Compile Include="PackageGuids.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Commands\ShowToolWindow.cs" />
+    <!-- Configuration Editor (§Config) — NEW -->
+    <Compile Include="Commands\ShowConfigEditor.cs" />
     <!-- Services -->
     <Compile Include="Services\OutputWindowService.cs" />
     <Compile Include="Services\StatusBarService.cs" />
@@ -72,6 +74,8 @@
     </Compile>
     <Compile Include="Services\MenuService.cs" />
     <Compile Include="Services\ToolbarService.cs" />
+    <!-- Configuration Editor Service — NEW -->
+    <Compile Include="Services\ConfigurationService.cs" />
     <!-- Tagging -->
     <Compile Include="Tagging\TodoTagger.cs" />
     <!-- Tool Window -->
@@ -80,6 +84,11 @@
       <DependentUpon>SampleToolWindowControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="ToolWindows\SampleToolWindowState.cs" />
+    <!-- Configuration Editor Tool Window — NEW -->
+    <Compile Include="ToolWindows\ConfigEditorWindow.cs" />
+    <Compile Include="ToolWindows\ConfigEditorControl.xaml.cs">
+      <DependentUpon>ConfigEditorControl.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\LICENSE">
@@ -218,6 +227,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
@@ -233,6 +243,11 @@
   </ItemGroup>
   <ItemGroup>
     <Page Include="ToolWindows\SampleToolWindowControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <!-- Configuration Editor XAML — NEW -->
+    <Page Include="ToolWindows\ConfigEditorControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
