@@ -20,50 +20,31 @@ namespace AsyncToolWindowSample
     [ProvideMenuResource("Menus.ctmenu", 1)]
     public sealed class MyPackage : AsyncPackage
     {
-        // --------------------------------------------------------------------- //
-        //  Singleton accessors – use after InitializeAsync completes             //
-        // --------------------------------------------------------------------- //
-
-        /// <summary>Output Window pane service – available after package load.</summary>
         public OutputWindowService OutputWindow { get; private set; }
-
-        /// <summary>Status bar service – available after package load.</summary>
         public StatusBarService StatusBar { get; private set; }
-
-        /// <summary>Selection / caret service – available after package load.</summary>
         public SelectionService Selection { get; private set; }
-
-        // --------------------------------------------------------------------- //
-        //  AsyncPackage lifecycle                                                //
-        // --------------------------------------------------------------------- //
+        public DocumentService Document { get; private set; }
 
         protected override async Task InitializeAsync(
             CancellationToken cancellationToken,
             IProgress<ServiceProgressData> progress)
         {
-            // ── 1. Construct services (still on background thread) ──
             OutputWindow = new OutputWindowService(this);
             StatusBar    = new StatusBarService(this);
             Selection    = new SelectionService(this);
+            Document     = new DocumentService(this);
 
-            // All three switch to UI thread internally for their COM calls
             await OutputWindow.InitializeAsync();
             await StatusBar.InitializeAsync();
             await Selection.InitializeAsync();
 
-            // ── 2. Switch to UI thread for VS shell operations ──
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             await ShowToolWindow.InitializeAsync(this);
 
-            // ── 3. Announce successful load ──
             OutputWindow.Log("AsyncToolWindowSample loaded successfully.");
             StatusBar.SetText("Async Tool Window Sample loaded.");
         }
-
-        // --------------------------------------------------------------------- //
-        //  Async Tool Window factory                                             //
-        // --------------------------------------------------------------------- //
 
         public override IVsAsyncToolWindowFactory GetAsyncToolWindowFactory(Guid toolWindowType)
         {
@@ -82,7 +63,6 @@ namespace AsyncToolWindowSample
         protected override async Task<object> InitializeToolWindowAsync(
             Type toolWindowType, int id, CancellationToken cancellationToken)
         {
-            // Runs on background thread – do expensive work here
             var dte = await GetServiceAsync(typeof(EnvDTE.DTE)) as EnvDTE80.DTE2;
 
             return new SampleToolWindowState
@@ -90,7 +70,8 @@ namespace AsyncToolWindowSample
                 DTE          = dte,
                 OutputWindow = OutputWindow,
                 StatusBar    = StatusBar,
-                Selection    = Selection
+                Selection    = Selection,
+                Document     = Document
             };
         }
     }

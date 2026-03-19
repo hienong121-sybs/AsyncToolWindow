@@ -19,5 +19,8 @@ namespace AsyncToolWindowSample.ToolWindows
 
         /// <summary>Selection / caret API wrapper (DTE + MEF tiers).</summary>
         public SelectionService Selection { get; set; }
+
+        /// <summary>Document &amp; File API wrapper.</summary>
+        public DocumentService Document { get; set; }
     }
 }

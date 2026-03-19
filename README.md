@@ -3,7 +3,8 @@
 **Applies to Visual Studio 2017 Update 6 (v15.6) and newer**
 
 This sample shows how to build a VS 2017 extension using the `AsyncPackage` pattern.
-It covers Output Window, Status Bar, and **Selection / Caret APIs** (both DTE and MEF tiers).
+It covers Output Window, Status Bar, Selection / Caret APIs (both DTE and MEF tiers),
+and **Document & File APIs**.
 
 Clone the repo and open in Visual Studio 2017 to run:
 
@@ -70,6 +71,20 @@ Managed MEF API. Positions are **0-based**. Supports multi-caret and `ITextEdit`
 | Replace Selection (MEF) | `ITextEdit.Replace` — wraps selection in a comment |
 | Buffer Char Count (MEF) | `snapshot.GetText().Length` + line count |
 
+### 6. Document & File APIs (`DocumentService`)
+DTE-based document introspection and manipulation.
+
+| Button | What it shows |
+|--------|---------------|
+| Show Active Doc Info | Name, FullName, Language, Kind, Saved, ReadOnly, Encoding, Project |
+| List All Open Docs | `[✓/*] Language  Name` for every open document |
+| TextDoc Info + Preview | Line count, char count, 200-char preview via `TextDocument` + `EditPoint` |
+| Read Lines 1–5 | Lines 1–5 of active document via `EditPoint.GetLines` |
+| Save Active Document | `doc.Save()` |
+| Format Document | `dte.ExecuteCommand("Edit.FormatDocument")` |
+| Save All | `dte.ExecuteCommand("File.SaveAll")` |
+| Go To Line 1 | `dte.ExecuteCommand("Edit.GoToLine", "1")` |
+
 ---
 
 ## Source map
@@ -83,7 +98,8 @@ src/
 ├── Services/
 │   ├── OutputWindowService.cs            ← Custom Output pane wrapper
 │   ├── StatusBarService.cs               ← IVsStatusbar wrapper
-│   └── SelectionService.cs               ← DTE + MEF selection wrapper  ← NEW
+│   ├── SelectionService.cs               ← DTE + MEF selection wrapper
+│   └── DocumentService.cs                ← Document & File API wrapper  ← NEW
 ├── ToolWindows/
 │   ├── SampleToolWindow.cs               ← ToolWindowPane subclass
 │   ├── SampleToolWindowControl.xaml      ← WPF UI
@@ -91,6 +107,11 @@ src/
 │   └── SampleToolWindowState.cs          ← State bag passed via async factory
 └── Properties/
     └── AssemblyInfo.cs
+docs/
+├── VS2017-Extension-API-Reference.md
+├── instructions.md
+└── tutorials/
+    └── document-file-apis_2026-03-19.md  ← NEW
 ```
 
 ---
@@ -119,6 +140,18 @@ package.JoinableTaskFactory.RunAsync(async () => { ... });
 | Box selection detection | via `sel.Mode` | via `selection.Mode` |
 | Edit buffer | `EditPoint.Insert/Replace` | `ITextEdit` transaction |
 | Requires MEF setup | ✗ | ✓ (`IVsEditorAdaptersFactoryService`) |
+
+### DocumentService — capabilities
+
+| API | Method |
+|-----|--------|
+| Properties snapshot | `GetActiveDocumentInfo()` |
+| All open docs | `GetAllOpenDocuments()` |
+| Save / SaveAs / Close / Undo | `SaveActiveDocument()`, `SaveActiveDocumentAs()`, `CloseActiveDocument()`, `UndoActiveDocument()` |
+| Open file / URL | `OpenFile()`, `NavigateUrl()` |
+| Read TextDocument | `GetTextDocumentInfo()`, `ReadLines()` |
+| Write via EditPoint | `InsertAtStart()` |
+| VS commands | `ExecuteCommand()`, `FormatDocument()`, `SaveAll()`, `GoToLine()` |
 
 ---
 

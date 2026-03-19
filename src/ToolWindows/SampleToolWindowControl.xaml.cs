@@ -14,6 +14,7 @@ namespace AsyncToolWindowSample.ToolWindows
         private OutputWindowService OutputWindow => _state.OutputWindow;
         private StatusBarService    StatusBar    => _state.StatusBar;
         private SelectionService    Selection    => _state.Selection;
+        private DocumentService     Document     => _state.Document;
 
         public SampleToolWindowControl(SampleToolWindowState state)
         {
@@ -40,7 +41,6 @@ namespace AsyncToolWindowSample.ToolWindows
         private void Button_WriteOutput_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             OutputWindow.Activate();
             OutputWindow.Log($"Button clicked – VS path: {_state.DTE?.FullName ?? "N/A"}");
             OutputWindow.WriteLine("You can write arbitrary text here.");
@@ -72,11 +72,9 @@ namespace AsyncToolWindowSample.ToolWindows
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 OutputWindow.Log("Starting 3-second animation…");
-
                 await StatusBar.RunWithAnimationAsync(
                     async () => await Task.Delay(3000),
                     "Processing… please wait");
-
                 OutputWindow.Log("Animation finished.");
             });
         }
@@ -111,7 +109,6 @@ namespace AsyncToolWindowSample.ToolWindows
         private void Button_DteCaretInfo_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             var info = Selection.GetDteCaretInfo();
             if (info == null)
             {
@@ -119,17 +116,14 @@ namespace AsyncToolWindowSample.ToolWindows
                 StatusBar.SetText("No active text document.");
                 return;
             }
-
             OutputWindow.Activate();
             OutputWindow.Log($"[DTE Caret] Line={info.Line}, Col={info.Column}");
             OutputWindow.Log($"  Anchor  : Line={info.AnchorLine}, Col={info.AnchorDisplayColumn}, AbsOffset={info.AnchorAbsOffset}");
             OutputWindow.Log($"  Active  : Line={info.ActiveLine}, AbsOffset={info.ActiveAbsOffset}");
             OutputWindow.Log($"  TopLine={info.TopLine}, BottomLine={info.BottomLine}");
             OutputWindow.Log($"  Mode={info.Mode}, IsEmpty={info.IsEmpty}");
-
             if (!info.IsEmpty)
                 OutputWindow.Log($"  Selected: \"{Truncate(info.SelectedText, 80)}\"");
-
             StatusBar.SetText($"DTE Caret – Line {info.Line}, Col {info.Column}");
         }
 
@@ -137,12 +131,10 @@ namespace AsyncToolWindowSample.ToolWindows
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             Selection.SelectCurrentLine();
-
             var info = Selection.GetDteCaretInfo();
             string msg = info != null
                 ? $"[DTE] Selected line {info.AnchorLine}."
                 : "[DTE] SelectLine called (no caret info).";
-
             OutputWindow.Log(msg);
             StatusBar.SetText(msg);
         }
@@ -150,12 +142,10 @@ namespace AsyncToolWindowSample.ToolWindows
         private void Button_DteFindTodo_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             bool found = Selection.FindText("TODO", matchCase: false);
             string msg = found
                 ? "[DTE] Found 'TODO' in active document."
                 : "[DTE] 'TODO' not found in active document.";
-
             OutputWindow.Log(msg);
             StatusBar.SetText(msg);
         }
@@ -175,7 +165,6 @@ namespace AsyncToolWindowSample.ToolWindows
         private void Button_MefCaretInfo_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             var info = Selection.GetMefCaretInfo();
             if (info == null)
             {
@@ -183,21 +172,18 @@ namespace AsyncToolWindowSample.ToolWindows
                 StatusBar.SetText("No focused editor pane.");
                 return;
             }
-
             OutputWindow.Activate();
             OutputWindow.Log($"[MEF Caret] Offset={info.Offset0Based} (0-based)");
             OutputWindow.Log($"  Line={info.LineNumber0Based} (0-based) → DTE Line={info.LineNumber0Based + 1}");
             OutputWindow.Log($"  Col={info.Column0Based} (0-based)");
             OutputWindow.Log($"  Buffer: {info.TotalChars} chars, {info.TotalLines} lines");
             OutputWindow.Log($"  ContentType: {info.ContentType}");
-
             StatusBar.SetText($"MEF Caret – Line {info.LineNumber0Based + 1}, Col {info.Column0Based}");
         }
 
         private void Button_MefSelectedSpans_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             var spans = Selection.GetMefSelectedSpans();
             if (spans.Count == 0)
             {
@@ -205,7 +191,6 @@ namespace AsyncToolWindowSample.ToolWindows
                 StatusBar.SetText("No selection.");
                 return;
             }
-
             OutputWindow.Activate();
             OutputWindow.Log($"[MEF] {spans.Count} selected span(s):");
             for (int i = 0; i < spans.Count; i++)
@@ -215,17 +200,14 @@ namespace AsyncToolWindowSample.ToolWindows
                 OutputWindow.Log($"       Lines {s.StartLine}–{s.EndLine} (0-based)");
                 OutputWindow.Log($"       Text: \"{Truncate(s.Text, 60)}\"");
             }
-
             StatusBar.SetText($"MEF: {spans.Count} span(s) selected.");
         }
 
         private void Button_MefInsert_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             const string inserted = "/* inserted by AsyncToolWindowSample */ ";
             Selection.InsertAtCaret(inserted);
-
             OutputWindow.Log($"[MEF] Inserted text at caret: \"{inserted}\"");
             StatusBar.SetText("MEF: text inserted at caret.");
         }
@@ -233,7 +215,6 @@ namespace AsyncToolWindowSample.ToolWindows
         private void Button_MefReplace_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             var spans = Selection.GetMefSelectedSpans();
             if (spans.Count == 0 || spans[0].Length == 0)
             {
@@ -241,11 +222,9 @@ namespace AsyncToolWindowSample.ToolWindows
                 StatusBar.SetText("MEF: select some text first.");
                 return;
             }
-
             string original    = spans[0].Text;
             string replacement = $"/* replaced: {original} */";
             Selection.ReplaceSelection(replacement);
-
             OutputWindow.Log($"[MEF] Replaced \"{Truncate(original, 40)}\" → \"{Truncate(replacement, 60)}\"");
             StatusBar.SetText("MEF: selection replaced.");
         }
@@ -253,7 +232,6 @@ namespace AsyncToolWindowSample.ToolWindows
         private void Button_MefBufferCount_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-
             string text = Selection.GetBufferText();
             if (text == null)
             {
@@ -261,10 +239,124 @@ namespace AsyncToolWindowSample.ToolWindows
                 StatusBar.SetText("No focused editor pane.");
                 return;
             }
-
             string msg = $"[MEF] Buffer: {text.Length} chars, {text.Split('\n').Length} lines.";
             OutputWindow.Log(msg);
             StatusBar.SetText(msg);
+        }
+
+        // ================================================================== //
+        //  DOCUMENT & FILE API buttons                                         //
+        // ================================================================== //
+
+        private void Button_DocInfo_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var info = Document.GetActiveDocumentInfo();
+            if (info == null)
+            {
+                OutputWindow.Log("[Doc] No active document.");
+                StatusBar.SetText("No active document.");
+                return;
+            }
+            OutputWindow.Activate();
+            OutputWindow.Log($"[Doc] Name     : {info.Name}");
+            OutputWindow.Log($"[Doc] FullName : {info.FullName}");
+            OutputWindow.Log($"[Doc] Language : {info.Language}");
+            OutputWindow.Log($"[Doc] Kind     : {info.Kind}");
+            OutputWindow.Log($"[Doc] Saved    : {info.Saved}   ReadOnly: {info.ReadOnly}");
+            OutputWindow.Log($"[Doc] Encoding : {info.Encoding} (65001=UTF-8)");
+            if (info.ProjectName != null)
+                OutputWindow.Log($"[Doc] Project  : {info.ProjectName}  Path: {info.ProjectFilePath}");
+            StatusBar.SetText($"Doc: {info.Name} | {info.Language} | Saved={info.Saved}");
+        }
+
+        private void Button_DocListAll_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var docs = Document.GetAllOpenDocuments();
+            OutputWindow.Activate();
+            OutputWindow.Log($"[Doc] Open documents ({docs.Count}):");
+            foreach (var d in docs)
+            {
+                string mark = d.Saved ? "✓" : "*";
+                OutputWindow.Log($"  [{mark}] {d.Language,-12} {d.Name}");
+            }
+            StatusBar.SetText($"Doc: {docs.Count} document(s) open.");
+        }
+
+        private void Button_TextDocInfo_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var info = Document.GetTextDocumentInfo();
+            if (info == null)
+            {
+                OutputWindow.Log("[TextDoc] Active document is not a text document (or none active).");
+                StatusBar.SetText("Not a text document.");
+                return;
+            }
+            OutputWindow.Activate();
+            OutputWindow.Log($"[TextDoc] Lines : {info.FirstLine}–{info.LastLine} ({info.LastLine} total)");
+            OutputWindow.Log($"[TextDoc] Chars : {info.TotalChars}");
+            OutputWindow.Log($"[TextDoc] Preview (first 200 chars):");
+            OutputWindow.Log($"  \"{Truncate(info.Preview, 160)}\"");
+            StatusBar.SetText($"TextDoc: {info.LastLine} lines, {info.TotalChars} chars.");
+        }
+
+        private void Button_DocReadLines_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            string lines = Document.ReadLines(1, 6); // lines 1–5 (endLine exclusive = 6)
+            if (lines == null)
+            {
+                OutputWindow.Log("[TextDoc] Cannot read lines – no active text document.");
+                StatusBar.SetText("No active text document.");
+                return;
+            }
+            OutputWindow.Activate();
+            OutputWindow.Log("[TextDoc] Lines 1–5:");
+            OutputWindow.Log(Truncate(lines, 400));
+            StatusBar.SetText("TextDoc: lines 1–5 read.");
+        }
+
+        private void Button_DocSave_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            bool ok = Document.SaveActiveDocument();
+            string msg = ok ? "[Doc] Active document saved." : "[Doc] No active document to save.";
+            OutputWindow.Log(msg);
+            StatusBar.SetText(msg);
+        }
+
+        private void Button_DocFormat_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var info = Document.GetActiveDocumentInfo();
+            if (info == null)
+            {
+                OutputWindow.Log("[Doc] No active document.");
+                StatusBar.SetText("No active document.");
+                return;
+            }
+            Document.FormatDocument();
+            string msg = $"[Doc] Edit.FormatDocument executed on {info.Name}.";
+            OutputWindow.Log(msg);
+            StatusBar.SetText(msg);
+        }
+
+        private void Button_DocSaveAll_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Document.SaveAll();
+            OutputWindow.Log("[Doc] File.SaveAll executed.");
+            StatusBar.SetText("All documents saved.");
+        }
+
+        private void Button_DocGoToLine_Click(object sender, RoutedEventArgs e)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Document.GoToLine(1);
+            OutputWindow.Log("[Doc] Edit.GoToLine 1 executed.");
+            StatusBar.SetText("Navigated to line 1.");
         }
 
         // ------------------------------------------------------------------ //

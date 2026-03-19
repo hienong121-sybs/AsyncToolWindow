@@ -5,6 +5,69 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] – 2026-03-19 (feat: document-file-apis)
+
+### Added
+
+#### `src/Services/DocumentService.cs` *(new file)*
+- **Mục đích:** Tách biệt logic truy cập Document & File APIs thành service riêng.
+- **Public API:**
+  - `GetActiveDocumentInfo()` – snapshot properties của active document (Name, FullName, Language, Kind, Saved, ReadOnly, Encoding, ProjectName, ProjectFilePath).
+  - `GetAllOpenDocuments()` – danh sách tất cả documents đang mở.
+  - `SaveActiveDocument()` – lưu document hiện tại.
+  - `SaveActiveDocumentAs(path)` – save-as.
+  - `CloseActiveDocument(saveChanges)` – đóng với tùy chọn lưu/bỏ.
+  - `UndoActiveDocument()` – undo thay đổi cuối.
+  - `OpenFile(path)` – mở file qua `ItemOperations.OpenFile`.
+  - `NavigateUrl(url)` – điều hướng URL qua `ItemOperations.Navigate`.
+  - `GetTextDocumentInfo()` – đọc FirstLine, LastLine, TotalChars, Preview 200 chars via `TextDocument` + `EditPoint`.
+  - `ReadLines(startLine, endLine)` – đọc range dòng qua `EditPoint.GetLines`.
+  - `InsertAtStart(text)` – chèn text ở đầu file qua `EditPoint.Insert`.
+  - `ExecuteCommand(name, args)` – chạy built-in VS command.
+  - `FormatDocument()` – `Edit.FormatDocument`.
+  - `SaveAll()` – `File.SaveAll`.
+  - `GoToLine(line)` – `Edit.GoToLine`.
+- **DTOs:** `DocumentInfo`, `TextDocumentInfo`.
+- **Lý do:** Demo Section 4 "Document & File APIs" theo tài liệu VS2017 Extension API Reference.
+
+#### `docs/tutorials/document-file-apis_2026-03-19.md` *(new file)*
+- Hướng dẫn sử dụng tính năng Document & File APIs: API reference, thread safety, DTOs, buttons.
+
+### Changed
+
+#### `src/ToolWindows/SampleToolWindowState.cs`
+- **Thêm** property `DocumentService Document`.
+
+#### `src/MyPackage.cs`
+- **Thêm** property `DocumentService Document` (singleton).
+- **`InitializeAsync`:** construct `DocumentService` (không cần `InitializeAsync` riêng).
+- **`InitializeToolWindowAsync`:** populate `SampleToolWindowState.Document`.
+
+#### `src/ToolWindows/SampleToolWindowControl.xaml`
+- **Thêm** section "── Document & File APIs ──" với 8 button mới:
+  - "Show Active Doc Info" – hiện Name/Path/Language/Saved/Encoding/Project.
+  - "List All Open Docs" – liệt kê [✓/*] Language Name cho mọi document đang mở.
+  - "TextDoc Info + Preview" – hiện Lines, TotalChars, 200-char preview qua TextDocument.
+  - "Read Lines 1–5" – đọc và log 5 dòng đầu qua EditPoint.
+  - "Save Active Document" – lưu file hiện tại.
+  - "Format Document" – chạy Edit.FormatDocument.
+  - "Save All" – chạy File.SaveAll.
+  - "Go To Line 1" – nhảy về dòng 1 qua Edit.GoToLine.
+- **`d:DesignHeight`** tăng từ 720 → 1080.
+
+#### `src/ToolWindows/SampleToolWindowControl.xaml.cs`
+- **Thêm** property `Document => _state.Document`.
+- **Thêm** 8 handler tương ứng 8 button mới.
+
+#### `src/AsyncToolWindowSample.csproj`
+- **Thêm** `<Compile Include="Services\DocumentService.cs" />`.
+
+#### `README.md`
+- Cập nhật features table thêm Section 4 Document & File APIs.
+- Cập nhật source map.
+
+---
+
 ## [Unreleased] – 2026-03-19 (patch: CS0122-getservice)
 
 ### Fixed
@@ -14,96 +77,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `AsyncPackage.GetService()` là `protected internal` — không thể gọi từ class bên ngoài.
   **Fix:** Lưu `AsyncPackage` vào `IServiceProvider _serviceProvider` (interface public mà
   `AsyncPackage` implement). Thay tất cả `_package.GetService(...)` bằng
-  `_serviceProvider.GetService(...)` ở dòng 69 (DTE) và dòng 164 (SVsTextManager).
-  `GetServiceAsync()` trong `InitializeAsync()` vẫn dùng `_package` bình thường
-  vì đó là method `public` của `AsyncPackage`.
-
----
-
-
-
-### Added
-
-#### `src/Services/SelectionService.cs` *(new file)*
-- **Mục đích:** Tách biệt logic truy cập Selection/Caret của VS thành service riêng,
-  hỗ trợ cả hai tầng API:
-  - **Tier 1 – DTE `TextSelection` (COM):** đơn giản, không cần MEF, phù hợp thao tác
-    điều hướng, tìm kiếm, chọn vùng văn bản theo dòng/offset 1-based.
-  - **Tier 2 – `IWpfTextView` (MEF):** chính xác, managed, hỗ trợ multi-caret, đọc/ghi
-    buffer qua `ITextEdit` transaction, offset 0-based.
-- **DTOs (data transfer objects) bổ sung:**
-  - `DteCaretInfo` – snapshot caret 1-based từ DTE.
-  - `MefCaretInfo` – snapshot caret 0-based từ MEF.
-  - `SelectionSpanInfo` – thông tin một `SnapshotSpan` đã chọn.
-- **Public API:**
-  - `InitializeAsync()` – resolve MEF `IVsEditorAdaptersFactoryService` qua
-    `SComponentModel`; safe to call on background thread.
-  - **Tier 1:** `GetDteSelection()`, `GetDteCaretInfo()`, `GotoLine()`,
-    `SelectAll()`, `SelectCurrentLine()`, `CollapseSelection()`, `FindText()`.
-  - **Tier 2:** `GetActiveWpfTextView()`, `GetMefCaretInfo()`,
-    `GetMefSelectedSpans()`, `InsertAtCaret()`, `ReplaceSelection()`,
-    `GetBufferText()`.
-- **Lý do:** Mở rộng demo extension theo tài liệu VS2017 Extension API Reference,
-  phần 3 "Selection APIs".
-
-### Changed
-
-#### `src/ToolWindows/SampleToolWindowState.cs`
-- **Thêm** property `SelectionService Selection`.
-- **Lý do:** Truyền service xuống Tool Window Control theo cùng pattern với
-  `OutputWindowService` và `StatusBarService`.
-
-#### `src/MyPackage.cs`
-- **Thêm** property `SelectionService Selection` (singleton).
-- **`InitializeAsync`:** khởi tạo `SelectionService` và gọi `InitializeAsync()`
-  song song với hai service hiện có.
-- **`InitializeToolWindowAsync`:** populate `SampleToolWindowState.Selection`.
-- **Lý do:** Package là nơi duy nhất resolve VS services – tránh service locator
-  rải rác.
-
-#### `src/ToolWindows/SampleToolWindowControl.xaml`
-- **Thêm** 9 button mới chia thành hai nhóm:
-  - *Selection (DTE / Tier 1):*
-    - "Show Caret Info (DTE)" – in Line/Col/Anchor/Active/Mode vào Output.
-    - "Select Current Line (DTE)" – `SelectLine()`.
-    - "Find 'TODO' (DTE)" – `FindText("TODO")`, báo found/not found.
-    - "Collapse Selection (DTE)" – `Collapse()`.
-  - *Selection (MEF / Tier 2):*
-    - "Show Caret Info (MEF)" – in Offset/Line/Col/TotalChars/ContentType.
-    - "Show Selected Spans (MEF)" – in tất cả `SnapshotSpan` đang chọn.
-    - "Insert Text at Caret (MEF)" – chèn comment placeholder qua `ITextEdit`.
-    - "Replace Selection (MEF)" – wrap selection trong comment qua `ITextEdit`.
-    - "Buffer Char Count (MEF)" – đếm chars và lines của buffer hiện tại.
-- **Thêm** `ScrollViewer` bao ngoài `StackPanel` để Tool Window có thể scroll khi
-  danh sách button dài hơn chiều cao cửa sổ.
-- **`d:DesignHeight`** tăng từ 450 → 720 để khớp layout mới.
-- **Lý do:** Cần UI demo trực tiếp trong Tool Window theo đúng mục tiêu extension.
-
-#### `src/ToolWindows/SampleToolWindowControl.xaml.cs`
-- **Thêm** property `Selection => _state.Selection`.
-- **Thêm** 9 handler tương ứng 9 button mới:
-  - `Button_DteCaretInfo_Click` – hiện `DteCaretInfo` vào Output Window.
-  - `Button_DteSelectLine_Click` – gọi `SelectCurrentLine()`.
-  - `Button_DteFindTodo_Click` – gọi `FindText("TODO")`.
-  - `Button_DteCollapse_Click` – gọi `CollapseSelection()`.
-  - `Button_MefCaretInfo_Click` – hiện `MefCaretInfo` vào Output Window.
-  - `Button_MefSelectedSpans_Click` – hiện tất cả spans vào Output Window.
-  - `Button_MefInsert_Click` – gọi `InsertAtCaret()`.
-  - `Button_MefReplace_Click` – gọi `ReplaceSelection()`.
-  - `Button_MefBufferCount_Click` – gọi `GetBufferText()` và đếm.
-- **Thêm** helper `Truncate(string, int)` để tránh log quá dài.
-- **Lý do:** Demo đầy đủ hai tầng Selection API theo tài liệu, không block UI thread.
-
-#### `src/AsyncToolWindowSample.csproj`
-- **Thêm** `<Compile Include="Services\SelectionService.cs" />`.
-- **Thêm** 4 `<Reference>` cho các managed assemblies cần thiết cho Tier 2:
-  - `Microsoft.VisualStudio.ComponentModelHost` (MEF container)
-  - `Microsoft.VisualStudio.Editor` (`IVsEditorAdaptersFactoryService`)
-  - `Microsoft.VisualStudio.Text.Logic`
-  - `Microsoft.VisualStudio.Text.UI` / `Microsoft.VisualStudio.Text.UI.Wpf`
-    (`IWpfTextView`, `ITextSelection`, `ITextCaret`)
-- **Lý do:** Compiler cần resolve các interface MEF từ VS managed assemblies;
-  chúng không có HintPath vì resolve qua `AssemblySearchPaths` của VS.
+  `_serviceProvider.GetService(...)`.
 
 ---
 
@@ -112,13 +86,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 #### `src/Services/StatusBarService.cs`
-- **CS0165 – Use of unassigned local variable 'frozen':**
-  Đổi `_statusBar?.IsFrozen(out int frozen)` thành `int frozen = 0; _statusBar?.IsFrozen(out frozen)`.
-- **CS1503 (×2) – ref ulong → ref uint:**
-  `IVsStatusbar.Progress` nhận `ref uint`; đổi `ReportProgress`/`ClearProgress` sang `ref uint cookie`.
+- **CS0165 – Use of unassigned local variable 'frozen':** Fix init `frozen = 0`.
+- **CS1503 (×2) – ref ulong → ref uint:** `IVsStatusbar.Progress` nhận `ref uint`.
 
 #### `src/ToolWindows/SampleToolWindowControl.xaml.cs`
-- Đổi `ulong cookie = 0` → `uint cookie = 0` trong `Button_Progress_Click`.
+- Đổi `ulong cookie = 0` → `uint cookie = 0`.
 
 ---
 
@@ -126,19 +98,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-#### `src/Services/OutputWindowService.cs` *(new file)*
-- `InitializeAsync()`, `WriteLine()`, `Log()`, `Activate()`, `Clear()`.
-
-#### `src/Services/StatusBarService.cs` *(new file)*
-- `InitializeAsync()`, `SetText()`, `StartAnimation()`, `StopAnimation()`,
-  `ReportProgress()`, `ClearProgress()`, `RunWithAnimationAsync()`.
+- `src/Services/OutputWindowService.cs` *(new)*
+- `src/Services/StatusBarService.cs` *(new)*
 
 ### Changed
 
-- `MyPackage.cs` – thêm `OutputWindow`, `StatusBar` properties + wire-up.
-- `SampleToolWindowState.cs` – thêm `OutputWindow`, `StatusBar`.
-- `SampleToolWindowControl.xaml` – thêm 5 button Output/StatusBar.
-- `SampleToolWindowControl.xaml.cs` – thêm handlers tương ứng.
+- `MyPackage.cs`, `SampleToolWindowState.cs`, `SampleToolWindowControl.xaml/.cs` – wire-up.
 
 ---
 
